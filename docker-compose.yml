@@ -1,0 +1,66 @@
+version: "3.9"
+
+# Amar eMart Goods — Local Data Server Stack
+# Run `docker compose up -d` to start a full local PostgreSQL data server
+# (plus a web-based DB admin UI) without installing Postgres natively.
+
+services:
+  # ---------------------------------------------------------
+  # PostgreSQL data server — persistent storage for all products
+  # ---------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: amar-emart-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - amar_emart_pgdata:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-app_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------
+  # Adminer — lightweight web UI to inspect/edit the database
+  # Visit http://localhost:8080 (system: PostgreSQL, server: db)
+  # ---------------------------------------------------------
+  adminer:
+    image: adminer:latest
+    container_name: amar-emart-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ---------------------------------------------------------
+  # Next.js application (API + web UI)
+  # Comment this service out if you prefer running `npm run dev`
+  # on your host machine against the dockerized db above.
+  # ---------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: amar-emart-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-app_db}
+      NODE_ENV: production
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  amar_emart_pgdata:
+    name: amar_emart_pgdata
