@@ -16,7 +16,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # DATABASE_URL isn't needed at build time for this app (no static DB calls
 # at build), but Next.js requires the env var to exist during build tracing.
-ENV DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app_db"
+ENV DATABASE_URL="postgresql://neondb_owner:npg_vCt0QRpABm3Z@ep-divine-lab-aygsa5eo-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 RUN npm run build
 
 # ---- runner: minimal production image ----
